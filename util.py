@@ -35,7 +35,7 @@ def post_listing_to_slack(sc, listing):
     :param sc: A slack client.
     :param listing: A record of the listing.
     """
-    desc = "{0} | {1} | {2} | {3} | <{4}>".format(listing["area"], listing["price"], listing["bart_dist"], listing["name"], listing["url"])
+    desc = "{0} | {1} | {2} | {3} | <{4}>".format(listing["price"], listing["bart"], round(listing["bart_dist"], 2), listing["name"], listing["url"])
     sc.api_call(
         "chat.postMessage", channel=settings.SLACK_CHANNEL, text=desc,
         username='pybot', icon_emoji=':robot_face:'
@@ -51,9 +51,8 @@ def find_points_of_interest(geotag, location):
     """
     area_found = False
     area = ""
-    min_dist = None
     near_bart = False
-    bart_dist = "N/A"
+    bart_dist = None
     bart = ""
     # Look to see if the listing is in any of the neighborhood boxes we defined.
     for a, coords in settings.BOXES.items():
@@ -64,11 +63,9 @@ def find_points_of_interest(geotag, location):
     # Check to see if the listing is near any transit stations.
     for station, coords in settings.TRANSIT_STATIONS.items():
         dist = coord_distance(coords[0], coords[1], geotag[0], geotag[1])
-        if (min_dist is None or dist < min_dist) and dist < settings.MAX_TRANSIT_DIST:
+        if (bart_dist is None or dist < bart_dist) and dist < settings.MAX_TRANSIT_DIST:
             bart = station
             near_bart = True
-
-        if (min_dist is None or dist < min_dist):
             bart_dist = dist
 
     # If the listing isn't in any of the boxes we defined, check to see if the string description of the neighborhood
@@ -82,6 +79,6 @@ def find_points_of_interest(geotag, location):
         "area_found": area_found,
         "area": area,
         "near_bart": near_bart,
-        "bart_dist": bart_dist,
+        "bart_dist": bart_dist or "N/A",
         "bart": bart
     }
